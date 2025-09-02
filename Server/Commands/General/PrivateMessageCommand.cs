@@ -23,12 +23,12 @@ internal class PrivateMessageCommand : IServerCommand
 
         if (targetClient != null && targetClient.Connected)
         {
-            await AsyncTCPServer.SendMessageToClientAsync(targetClient, $"[PM] {server.clients[client]}: {message}");
-            await AsyncTCPServer.SendMessageToClientAsync(client, $"[PM to {targetName}]: {message}");
+            await AsyncTCPServer.SendMessageToClientAsync(targetClient, "PM", $"{server.clients[client]}: {message}");
+            await AsyncTCPServer.SendMessageToClientAsync(client, "PM", $"[{targetName}]: {message}");
         }
         else
         {
-            await AsyncTCPServer.SendMessageToClientAsync(client, $"User '{targetName}' not found or disconnected.");
+            await AsyncTCPServer.SendMessageToClientAsync(client,"SEVER", $"User '{targetName}' not found or disconnected.");
         }
     }
 }

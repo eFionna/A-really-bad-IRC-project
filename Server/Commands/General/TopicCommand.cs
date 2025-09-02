@@ -13,18 +13,18 @@ internal class TopicCommand : IServerCommand
     {
         if (args.Length < 1) return;
 
-        string channel = args[0];
+        string channel = args[0].ToLower();
         if (!channel.StartsWith('#')) return;
 
         if (args.Length == 1)
         {
             if (server.channelTopics.TryGetValue(channel, out string? topic))
             {
-                await AsyncTCPServer.SendMessageToClientAsync(client, $"Topic for {channel}: {topic}");
+                await AsyncTCPServer.SendMessageToClientAsync(client, "SERVER", $"Topic for {channel}: {topic}");
             }
             else
             {
-                await AsyncTCPServer.SendMessageToClientAsync(client, $"No topic is set for {channel}");
+                await AsyncTCPServer.SendMessageToClientAsync(client, "SERVER", $"No topic is set for {channel}");
             }
             return ;
         }

@@ -11,26 +11,26 @@ internal class WhoCommand : IServerCommand
     {
         if (args.Length < 1) return;
 
-        string channel = args[0].Trim();
+        string channel = args[0].Trim().ToLower();
 
-        if (!channel.StartsWith("#"))
+        if (!channel.StartsWith('#'))
         {
-            await AsyncTCPServer.SendMessageToClientAsync(client, "Invalid channel name. Channels must start with '#'.");
+            await AsyncTCPServer.SendMessageToClientAsync(client,"SERVER", "Invalid channel name. Channels must start with '#'.");
             return;
         }
 
         if (!server.channels.TryGetValue(channel, out var clientsInChannel) || clientsInChannel.IsEmpty)
         {
-            await AsyncTCPServer.SendMessageToClientAsync(client, $"Channel {channel} does not exist or has no users.");
+            await AsyncTCPServer.SendMessageToClientAsync(client, "SERVER", $"Channel {channel} does not exist or has no users.");
             return;
         }
 
-        await AsyncTCPServer.SendMessageToClientAsync(client, $"Users in {channel}:");
+        await AsyncTCPServer.SendMessageToClientAsync(client, "SERVER", $"Users in {channel}:");
 
         foreach (var kvp in clientsInChannel)
         {
             string username = server.clients.TryGetValue(kvp.Key, out var name) ? name : "Unknown";
-            await AsyncTCPServer.SendMessageToClientAsync(client, $"  {username}");
+            await AsyncTCPServer.SendMessageToClientAsync(client, "SERVER", $"  {username}");
         }
     }
 }

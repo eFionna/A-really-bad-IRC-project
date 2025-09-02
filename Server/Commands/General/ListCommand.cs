@@ -14,11 +14,11 @@ internal class ListCommand : IServerCommand
 
         if (server.channels.IsEmpty)
         {
-            await AsyncTCPServer.SendMessageToClientAsync(client, "No channels are currently available.");
+            await AsyncTCPServer.SendMessageToClientAsync(client, "SERVER", "No channels are currently available.");
             return;
         }
 
-        await AsyncTCPServer.SendMessageToClientAsync(client, "Available channels:");
+        await AsyncTCPServer.SendMessageToClientAsync(client, "SERVER", "Available channels:");
 
         foreach (var kvp in server.channels)
         {
@@ -26,11 +26,9 @@ internal class ListCommand : IServerCommand
             int userCount = kvp.Value.Count;
 
             // Try to get the topic
-            string topic = server.channelTopics.TryGetValue(channelName, out string t) ? t : "No topic";
+            string topic = server.channelTopics.TryGetValue(channelName, out string? t) ? t : "No topic";
 
-            await AsyncTCPServer.SendMessageToClientAsync(
-                client,
-                $"  {channelName} ({userCount} users) - Topic: {topic}"
+            await AsyncTCPServer.SendMessageToClientAsync(client, "SERVER",$"  {channelName} ({userCount} users) - Topic: {topic}"
             );
         }
     }

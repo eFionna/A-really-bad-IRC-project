@@ -12,7 +12,7 @@ internal class PartCommand : IServerCommand
     {
         if (args.Length < 1) return Task.CompletedTask;
 
-        string channel = args[0].Trim();
+        string channel = args[0].Trim().ToLower();
 
         if (!channel.StartsWith('#'))
             return Task.CompletedTask;

@@ -12,7 +12,7 @@ internal class JoinCommand : IServerCommand
     {
         if (args.Length < 1) return;
 
-        string channel = args[0].Trim();
+        string channel = args[0].Trim().ToLower();
 
         if (!channel.StartsWith('#'))
             return;
@@ -26,7 +26,7 @@ internal class JoinCommand : IServerCommand
         if (!server.channels.ContainsKey(channel) && server.channels.Count >= server.MaxChannels)
         {
             Console.WriteLine($"{server.clients[client]} tried to create a new channel, but the server limit is reached.");
-            await AsyncTCPServer.SendMessageToClientAsync(client, "The maximum server limit is reached.");
+            await AsyncTCPServer.SendMessageToClientAsync(client, "SERVER", "The maximum server limit is reached.");
             return;
         }
 
@@ -49,11 +49,11 @@ internal class JoinCommand : IServerCommand
 
         if (server.channelTopics.TryGetValue(channel, out string? topic))
         {
-            await AsyncTCPServer.SendMessageToClientAsync(client, $"Topic for {channel}: {topic}");
+            await AsyncTCPServer.SendMessageToClientAsync(client, "SERVER", $"Topic for {channel}: {topic}");
         }
         else
         {
-            await AsyncTCPServer.SendMessageToClientAsync(client, $"No topic is set for {channel}");
+            await AsyncTCPServer.SendMessageToClientAsync(client, "SERVER", $"No topic is set for {channel}");
         }
     }
 }

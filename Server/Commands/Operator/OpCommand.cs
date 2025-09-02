@@ -13,7 +13,7 @@ internal class OpCommand : IServerCommand
     {
         if (args.Length < 2) return Task.CompletedTask;
 
-        string channel = args[0].Trim();
+        string channel = args[0].Trim().ToLower();
         string targetName = args[1].Trim();
 
         if (!channel.StartsWith('#')) return Task.CompletedTask;

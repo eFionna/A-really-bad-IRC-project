@@ -12,7 +12,7 @@ internal class BanCommand : IServerCommand
     {
         if (args.Length < 2) return Task.CompletedTask;
 
-        string channel = args[0];
+        string channel = args[0].ToLower();
         string targetName = args[1];
 
         if (!channel.StartsWith('#')) return Task.CompletedTask;

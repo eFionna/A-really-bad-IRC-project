@@ -11,11 +11,11 @@ internal class HelpCommand : IServerCommand
     {
         if (!client.Connected) return;
 
-        await AsyncTCPServer.SendMessageToClientAsync(client, "Available commands:");
+        await AsyncTCPServer.SendMessageToClientAsync(client, "SERVER", "Available commands:");
 
         foreach (var cmd in server.GetCommands())
         {
-            await AsyncTCPServer.SendMessageToClientAsync(client, $"  /{cmd.Name} - {cmd.Description}");
+            await AsyncTCPServer.SendMessageToClientAsync(client, "SERVER", $"  /{cmd.Name} - {cmd.Description}");
         }
     }
 }

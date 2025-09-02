@@ -12,11 +12,11 @@ internal class KickCommand : IServerCommand
     {
         if (args.Length < 2) return Task.CompletedTask;
 
-        string channel = args[0];
+        string channel = args[0].ToLower();
         string targetName = args[1];
         string reason = args.Length > 2 ? string.Join(' ', args.Skip(2)) : "No reason given";
 
-        if (!channel.StartsWith("#")) return Task.CompletedTask;
+        if (!channel.StartsWith('#')) return Task.CompletedTask;
         if (!server.IsOp(client, channel)) return Task.CompletedTask;
 
         if (server.channels.TryGetValue(channel, out var clientsInChannel))

@@ -108,13 +108,15 @@ internal class AsyncTCPServer
         CleanupClient(client);
     }
 
-    internal static async Task SendMessageToClientAsync(TcpClient client, string message)
+    internal static async Task SendMessageToClientAsync(TcpClient client,string from, string message)
     {
         if (client == null || !client.Connected) return;
 
         try
         {
-            byte[] data = Encoding.UTF8.GetBytes(message + "\n");
+            string time = DateTime.Now.ToString("HH:mm");
+            string formatted = $"[{time}] [{from}] {message}";
+            byte[] data = Encoding.UTF8.GetBytes(formatted + "\n");
             await client.GetStream().WriteAsync(data);
         }
         catch (Exception ex)
@@ -133,6 +135,7 @@ internal class AsyncTCPServer
         // Check global IP ban list
         if (IsIPBanned(remoteIp))
         {
+            await SendMessageToClientAsync(tcpClient,"SERVER", "You are banned");
             Console.WriteLine($"Rejected connection from banned IP: {remoteIp}");
             CleanupClient(tcpClient);
             return;
@@ -161,6 +164,7 @@ internal class AsyncTCPServer
             string name = msg[(msg.IndexOf(':') + 1)..].Trim();
             if (string.IsNullOrEmpty(name) || clients.Values.Contains(name))
             {
+                await SendMessageToClientAsync(tcpClient, "SERVER", "Name is allredy Taken");
                 CleanupClient(tcpClient);
                 return;
             }
@@ -168,8 +172,9 @@ internal class AsyncTCPServer
             clients[tcpClient] = name;
 
             //Automatically join DefaultChannel
-            channels.GetOrAdd("#general", _ => new ConcurrentDictionary<TcpClient, bool>())[tcpClient] = true;
-            EnqueueMessage("#general", $"{name} has joined #general");
+            //channels.GetOrAdd("#general", _ => new ConcurrentDictionary<TcpClient, bool>())[tcpClient] = true;
+            //EnqueueMessage("#general", $"{name} has joined #general");
+            await SendMessageToClientAsync(tcpClient, "SERVER", $"Welcome {name}");
 
             //Message loop
             var sb = new StringBuilder();
@@ -217,21 +222,21 @@ internal class AsyncTCPServer
             var parts = input[1..].Split(' ', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 0) return;
             string cmdName = parts[0];
-            string[] args = parts.Skip(1).ToArray();
+            string[] args = [.. parts.Skip(1)];
 
             if (commands.TryGetValue(cmdName, out var cmd))
             {
                 await cmd.ExecuteAsync(args, client, this);
             }
         }
-        else
-        {
-            foreach (var kvp in channels)
-            {
-                if (kvp.Value.ContainsKey(client))
-                    EnqueueMessage(kvp.Key, $"{clients[client]}: {input}");
-            }
-        }
+        //else
+        //{
+        //    foreach (var kvp in channels)
+        //    {
+        //        if (kvp.Value.ContainsKey(client))
+        //            EnqueueMessage(kvp.Key, $"{clients[client]}: {input}");
+        //    }
+        //}
     }
 
     private async Task ProcessMessageQueueAsync()
@@ -242,7 +247,9 @@ internal class AsyncTCPServer
             {
                 if (channels.TryGetValue(msg.channel, out var clientsInChannel))
                 {
-                    byte[] data = Encoding.UTF8.GetBytes(msg.message + "\n");
+                    string time = DateTime.Now.ToString("HH:mm");
+                    string formatted = $"[{time}] [{msg.channel}] {msg.message}";
+                    byte[] data = Encoding.UTF8.GetBytes(formatted + "\n");
                     foreach (var c in clientsInChannel.Keys)
                     {
                         try
@@ -310,7 +317,7 @@ internal class AsyncTCPServer
 
             foreach (var client in clientsInChannel.Keys)
             {
-                SendMessageToClientAsync(client, $"Channel {channel} was removed by {byUser}").Wait();
+                SendMessageToClientAsync(client, channel.ToUpper(), $"Channel {channel} was removed by {byUser}").Wait();
                 channels[DefaultChannel][client] = true;
             }
 

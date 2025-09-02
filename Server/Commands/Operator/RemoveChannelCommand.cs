@@ -11,26 +11,26 @@ internal class RemoveChannelCommand : IServerCommand
     {
         if (args.Length < 1) return;
 
-        string channel = args[0].Trim();
+        string channel = args[0].Trim().ToLower();
 
         if (!channel.StartsWith('#'))
             return;
 
         if (channel.Equals(AsyncTCPServer.DefaultChannel, StringComparison.OrdinalIgnoreCase))
         {
-            await AsyncTCPServer.SendMessageToClientAsync(client, "You cannot remove the default channel.");
+            await AsyncTCPServer.SendMessageToClientAsync(client,"SERVER", "You cannot remove the default channel.");
             return;
         }
 
         if (!server.channels.ContainsKey(channel))
         {
-            await AsyncTCPServer.SendMessageToClientAsync(client, $"Channel {channel} does not exist.");
+            await AsyncTCPServer.SendMessageToClientAsync(client, "SERVER", $"Channel {channel} does not exist.");
             return;
         }
 
         if (!server.channelOps.TryGetValue(channel, out var ops) || !ops.ContainsKey(client))
         {
-            await AsyncTCPServer.SendMessageToClientAsync(client, $"You are not an operator in {channel}.");
+            await AsyncTCPServer.SendMessageToClientAsync(client, "SERVER", $"You are not an operator in {channel}.");
             return;
         }
 
@@ -44,7 +44,7 @@ internal class RemoveChannelCommand : IServerCommand
                 {
                     // Ensure they are added back to #general
                     server.channels[AsyncTCPServer.DefaultChannel][c] = true;
-                    await AsyncTCPServer.SendMessageToClientAsync(c, $"Channel {channel} was removed. You were moved to {AsyncTCPServer.DefaultChannel}.");
+                    await AsyncTCPServer.SendMessageToClientAsync(c, "SERVER", $"Channel {channel} was removed. You were moved to {AsyncTCPServer.DefaultChannel}.");
                 }
             }
 
