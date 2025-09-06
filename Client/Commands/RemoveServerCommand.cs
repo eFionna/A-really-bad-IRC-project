@@ -1,16 +1,21 @@
 ﻿
+using Shared.Commands;
+
 namespace Client.Commands;
 
-internal class RemoveServerCommand : IClientCommand
+internal class RemoveServerCommand : IAsyncCommand
 {
     public string Name => "removeserver";
 
     public string Description => "Remove a server from known servers";
 
-    public void Execute(string[] args)
+    public string Usage => "removeserver <alias>";
+
+    public Task ExecuteAsync(AsyncCommandBaseArgs args)
     {
-        if (args.Length != 1) return;
-        string alias = args[0];
+        if (args.Arguments.Length != 1) return Task.CompletedTask;
+
+        string alias = args.Arguments[0];
 
         if (LocalClient.knownServers.Remove(alias))
         {
@@ -20,5 +25,6 @@ internal class RemoveServerCommand : IClientCommand
         {
             Console.WriteLine($"Server '{alias}' not found");
         }
+        return Task.CompletedTask;
     }
 }

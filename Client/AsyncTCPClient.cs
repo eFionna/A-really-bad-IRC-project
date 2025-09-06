@@ -1,107 +1,109 @@
-﻿using System.Net.Sockets;
+﻿using Client.Commands.TCPClient;
+using Shared.Commands;
+using System;
+using System.Net.Sockets;
 using System.Text;
 
 namespace Client;
 
-internal class AsyncTCPClient(string host, int port)
+internal sealed class AsyncTCPClient(string host, int port)
 {
     public const int BufferSize = 2 * 1024;
-
-    private readonly string host = host;
-    private readonly int port = port;
     private readonly TcpClient client = new();
     private NetworkStream? stream;
 
-    private string? currentChannel; // Keep track of the last joined channel
-
+    private string? currentChannel;
     private readonly byte[] receiveBuffer = new byte[BufferSize];
 
+    private readonly CommandParser commandParser = new();
+    private bool stopped;
 
-    public async Task RunAsync()
+    private bool nameIsSet;
+    internal bool NameIsSet
     {
+        get { return nameIsSet; }
+        set
+        {
+            if (value && !nameIsSet)
+                nameIsSet = true;
+        }
+    }
+
+    internal string? CurrentChannel { get => currentChannel; set => currentChannel = value; }
+
+    public async Task StartAsync()
+    {
+        commandParser.RegisterCommand(new SetNameCommand(this));
+
+
+        Console.WriteLine($"Connecting to {host}:{port})....");
         await client.ConnectAsync(host, port);
         stream = client.GetStream();
-
         _ = Task.Run(ReceiveMessagesAsync);
 
-        await SendName();
-        Thread.Sleep(10);
 
-        while (client.Connected)
-        {
-            string? input = Console.ReadLine();
-            ClearPreviousConsoleLine();
-
-            if (string.IsNullOrEmpty(input)) continue;
-
-            input = input.Trim();
-
-            if (input.Equals("/quit", StringComparison.CurrentCultureIgnoreCase))
-            {
-                await SendAsync("/quit");
-                break;
-            }
-
-            // If input starts with /, send it as a command
-            if (input.StartsWith('/'))
-            {
-                // Handle /join to update currentChannel automatically
-                if (input.StartsWith("/join ", StringComparison.OrdinalIgnoreCase))
-                {
-                    string[] parts = input.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
-                    if (parts.Length == 2)
-                        currentChannel = parts[1].Trim();
-                }
-
-                await SendAsync(input);
-            }
-            else
-            {
-                // If user types a plain message, send it as /say to currentChannel
-                if (string.IsNullOrEmpty(currentChannel))
-                {
-                    Console.WriteLine("You are not in any channel. Use /join #channel first.");
-                    continue;
-                }
-
-                await SendAsync($"/say {currentChannel} {input}");
-            }
-        }
-
-        await DisconnectAsync();
+        //if (input.Equals("/quit", StringComparison.CurrentCultureIgnoreCase))
+        //{
+        //    await SendAsync("/quit");
+        //    break;
+        //}
     }
 
-    private async Task SendName()
+    private bool NameSetCheck(string input)
     {
-        Console.Write("Enter your username: ");
+        if (nameIsSet) return true;
 
-        string username = string.Empty;
+        if (input.StartsWith("/setname", StringComparison.CurrentCultureIgnoreCase)) return true;
 
-        var input = Console.ReadLine();
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.WriteLine("You need to set you name with /setname <username>");
+        Console.ResetColor();
 
-        if (!string.IsNullOrEmpty(input))
-        {
-            username = input.Trim().Replace(' ', '_');
-        }
-
-        if (string.IsNullOrEmpty(username))
-        {
-            username = "Anonymous_" + DateTime.Now.Millisecond;
-        }
-
-        await SendAsync($"name:{username}");
+        return false;
     }
 
-    private async Task SendAsync(string message)
+    internal async Task ReciveInput(string input)
+    {
+        if (!NameSetCheck(input))
+            return;
+
+        if (commandParser.TryGetCommandFromInput(input, out IAsyncCommand cmd))
+        {
+            var args = new AsyncCommandBaseArgs(CommandParser.GetArgumentsFromCommand(input));
+            _ = Task.Run(async () =>
+            {
+                await cmd.ExecuteAsync(args);
+            });
+            return;
+        }
+
+        if (input[0] == '/')
+        {
+            await SendAsync(input);
+            return;
+        }
+
+        if (string.IsNullOrEmpty(currentChannel))
+        {
+            Console.WriteLine("You are not in any channel. Use /join #channel first.");
+            return;
+        }
+
+        await SendAsync($"/say {currentChannel} {input}");
+    }
+
+    internal async Task SendAsync(string message)
     {
         if (stream == null) return;
         byte[] msgBytes = Encoding.UTF8.GetBytes(message + "\n");
         await stream.WriteAsync(msgBytes);
     }
 
+
+
     private async Task ReceiveMessagesAsync()
     {
-        while (client.Connected)
+        while (client.Connected && !stopped)
         {
             try
             {
@@ -114,10 +116,9 @@ internal class AsyncTCPClient(string host, int port)
                     if (msg.Contains("[SERVER]"))
                     {
                         Console.ForegroundColor = ConsoleColor.Green;
-
                         if (msg.Contains("name", StringComparison.CurrentCultureIgnoreCase))
                         {
-                            await DisconnectAsync();
+                            await LocalClient.StopChatClient();
                         }
                     }
                     else if (msg.Contains("[PM]"))
@@ -134,23 +135,23 @@ internal class AsyncTCPClient(string host, int port)
                 break;
             }
         }
+
         Console.WriteLine("Disconnected from server.");
     }
 
-    private static void ClearPreviousConsoleLine()
-    {
-        int currentLineCursor = Console.CursorTop;
-        if (currentLineCursor > 0)
-        {
-            Console.SetCursorPosition(0, currentLineCursor - 1);
-            Console.Write(new string(' ', Console.WindowWidth));
-            Console.SetCursorPosition(0, currentLineCursor - 1);
-        }
-    }
 
-    private async Task DisconnectAsync()
+    internal async Task StopAsync()
     {
-        if (stream != null) await stream.DisposeAsync();
+        if (stopped) return;
+        stopped = true;
+
+        if (stream != null)
+        {
+            await stream.DisposeAsync();
+            stream = null;
+        }
+
         client.Close();
+        client.Dispose();
     }
 }

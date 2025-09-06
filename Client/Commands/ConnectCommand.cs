@@ -1,23 +1,30 @@
-﻿namespace Client.Commands;
+﻿using Shared.Commands;
 
-internal class ConnectCommand : IClientCommand
+namespace Client.Commands;
+
+internal class ConnectCommand : IAsyncCommand
 {
     public string Name => "connect";
 
     public string Description => "Connect to a specific known server";
 
-    public void Execute(string[] args)
-    {
-        if (args.Length != 1) return;
+    public string Usage => "connect <alias>";
 
-        string alias = args[0];
+
+    public Task ExecuteAsync(AsyncCommandBaseArgs args)
+    {
+        if (args.Arguments.Length != 1) 
+            return Task.CompletedTask;
+
+        string alias = args.Arguments[0];
 
         if (!LocalClient.knownServers.TryGetValue(alias, out var server))
         {
             Console.WriteLine($"Server '{alias}' not found");
-            return;
+            return Task.CompletedTask;
         }
-        LocalClient.currentServerKey = alias;
-        Console.WriteLine($"Connecting to {alias} ({server.host}:{server.port})....");
+         LocalClient.StartChatClient(alias);
+
+        return Task.CompletedTask;
     }
 }
